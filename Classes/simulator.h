@@ -10,98 +10,15 @@
 
 static int dt = 10;		// in milliseconds
 
-glm::mat4 createRotationMatrixFromEulerAngles(const glm::vec3& eulerAngles) {
-	glm::vec3 radians = glm::radians(eulerAngles);
-
-	glm::mat4 rotationX = glm::rotate(glm::mat4(1.0f), radians.x, glm::vec3(1.0f, 0.0f, 0.0f));
-	glm::mat4 rotationY = glm::rotate(glm::mat4(1.0f), radians.y, glm::vec3(0.0f, 1.0f, 0.0f));
-	glm::mat4 rotationZ = glm::rotate(glm::mat4(1.0f), radians.z, glm::vec3(0.0f, 0.0f, 1.0f));
-
-	glm::mat4 rotationMatrix = rotationZ * rotationY * rotationX;
-
-	return rotationMatrix;
-}
-
-void normalizeTwoEulerAngles(glm::vec3& ea1, glm::vec3& ea2) {
-	while (abs(ea1.x - ea2.x) > 180.f) ea2.x += (-1) * copysign(1.0, ea2.x) * 360.f;
-	while (abs(ea1.y - ea2.y) > 180.f) ea2.y += (-1) * copysign(1.0, ea2.y) * 360.f;
-	while (abs(ea1.z - ea2.z) > 180.f) ea2.z += (-1) * copysign(1.0, ea2.z) * 360.f;
-
-	//while (ea1.x < 0.f && ea2.x < 0.f) { ea1.x += 360.f; ea2.x += 360.f; }
-	//while (ea1.y < 0.f && ea2.y < 0.f) { ea1.y += 360.f; ea2.y += 360.f; }
-	//while (ea1.z < 0.f && ea2.z < 0.f) { ea1.z += 360.f; ea2.z += 360.f; }
-
-	glm::vec3 altEa1_1 = glm::vec3(ea1.x + 180.f, 180.f - ea1.y, ea1.z + 180.f);
-	glm::vec3 altEa2_1 = glm::vec3(ea2.x + 180.f, 180.f - ea2.y, ea2.z + 180.f);
-
-	std::vector<glm::vec3> ea1_vec = { ea1, altEa1_1 };
-	std::vector<glm::vec3> ea2_vec = { ea2, altEa2_1 };
-
-	for (int i = 0; i < 2; i++) {
-		ea1_vec.push_back(ea1_vec[i] + glm::vec3(360.f, 0.f, 0.f));
-		ea1_vec.push_back(ea1_vec[i] + glm::vec3(0.f, 360.f, 0.f));
-		ea1_vec.push_back(ea1_vec[i] + glm::vec3(0.f, 0.f, 360.f));
-		ea1_vec.push_back(ea1_vec[i] - glm::vec3(360.f, 0.f, 0.f));
-		ea1_vec.push_back(ea1_vec[i] - glm::vec3(0.f, 360.f, 0.f));
-		ea1_vec.push_back(ea1_vec[i] - glm::vec3(0.f, 0.f, 360.f));
-		
-		ea2_vec.push_back(ea2_vec[i] + glm::vec3(360.f, 0.f, 0.f));
-		ea2_vec.push_back(ea2_vec[i] + glm::vec3(0.f, 360.f, 0.f));
-		ea2_vec.push_back(ea2_vec[i] + glm::vec3(0.f, 0.f, 360.f));
-		ea2_vec.push_back(ea2_vec[i] - glm::vec3(360.f, 0.f, 0.f));
-		ea2_vec.push_back(ea2_vec[i] - glm::vec3(0.f, 360.f, 0.f));
-		ea2_vec.push_back(ea2_vec[i] - glm::vec3(0.f, 0.f, 360.f));
-	}
-
-	std::vector<float> distances;
-	for (int i = 0; i < ea1_vec.size(); i++) {
-		for (int j = 0; j < ea2_vec.size(); j++) {
-			distances.push_back(glm::distance(ea1_vec[i], ea2_vec[j]));
-		}
-	}
-
-	int minIndex = std::min_element(distances.begin(), distances.end()) - distances.begin();
-	int ea1Index = minIndex / ea2_vec.size();
-	int ea2Index = minIndex % ea2_vec.size();
-
-	ea1 = ea1_vec[ea1Index];
-	ea2 = ea2_vec[ea2Index];
-}
-
-glm::vec3 normalizeEulerAngles(const glm::vec3& eulerAngles) {
-	glm::vec3 normalized = eulerAngles;
-
-	while (normalized.x > 180.f) normalized.x -= 360.f;
-	while (normalized.x < -180.f) normalized.x += 360.f;
-	while (normalized.y > 180.f) normalized.y -= 360.f;
-	while (normalized.y < -180.f) normalized.y += 360.f;
-	while (normalized.z > 180.f) normalized.z -= 360.f;
-	while (normalized.z < -180.f) normalized.z += 360.f;
-
-	return normalized;
-}
-
-struct RotationSet {
-	glm::vec3 startEA;
-	glm::vec3 endEA;
-	glm::quat startQuat;
-	glm::quat endQuat;
-
-	RotationSet(glm::vec3 startEA, glm::vec3 endEA, glm::quat startQuat, glm::quat endQuat) :
-		startEA(startEA), endEA(endEA), startQuat(startQuat), endQuat(endQuat) {
-	};
-};
-
 struct SymParams {
 	glm::vec3 startPos;
 	glm::vec3 endPos;
 	float speed;
-	bool isEA;
-	glm::vec4 startParam;
-	glm::vec4 endParam;
+	glm::quat startQuat;
+	glm::quat endQuat;
 
-	SymParams(glm::vec3 startPos, glm::vec3 endPos, float speed, bool isEA, glm::vec4 startParam, glm::vec4 endParam) :
-		startPos(startPos), endPos(endPos), speed(speed), isEA(isEA), startParam(startParam), endParam(endParam) {}
+	SymParams(glm::vec3 startPos, glm::vec3 endPos, float speed, glm::quat startQuat, glm::quat endQuat) :
+		startPos(startPos), endPos(endPos), speed(speed), startQuat(startQuat), endQuat(endQuat) {}
 };
 
 struct SymData {
@@ -120,8 +37,8 @@ struct SymMemory {
 	std::atomic<bool> terminateThread;
 	std::atomic<float> sleep_debt;
 
-	SymMemory(glm::vec3 startPos, glm::vec3 endPos, float speed, bool isEA, glm::vec4 startParam, glm::vec4 endParam) :
-		params(startPos, endPos, speed, isEA, startParam, endParam), data()
+	SymMemory(glm::vec3 startPos, glm::vec3 endPos, float speed, glm::quat startQuat, glm::quat endQuat) :
+		params(startPos, endPos, speed, startQuat, endQuat), data()
 	{
 		terminateThread = false;
 		sleep_debt = 0.f;
@@ -135,62 +52,23 @@ struct SymMemory {
 	}
 };
 
-RotationSet calcRotationSet(SymMemory* memory)
+std::pair<glm::mat4, glm::mat4> calculateModelMatrices(SymMemory* memory, float t)
 {
-	glm::quat startQuat, endQuat;
-	glm::vec3 startEA, endEA;
-
-	if (memory->params.isEA) {
-		startEA = glm::vec3(memory->params.startParam);
-		endEA = glm::vec3(memory->params.endParam);
-
-		startEA = normalizeEulerAngles(startEA);
-		endEA = normalizeEulerAngles(endEA);
-		normalizeTwoEulerAngles(startEA, endEA);
-
-		startQuat = glm::quat(glm::radians(startEA));
-		endQuat = glm::quat(glm::radians(endEA));
-	}
-	else {
-		startQuat = glm::quat(memory->params.startParam);
-		endQuat = glm::quat(memory->params.endParam);
-
-		startEA = glm::degrees(glm::eulerAngles(startQuat));
-		endEA = glm::degrees(glm::eulerAngles(endQuat));
-
-		startEA = normalizeEulerAngles(startEA);
-		endEA = normalizeEulerAngles(endEA);
-		normalizeTwoEulerAngles(startEA, endEA);
-	}
-
-	return RotationSet(startEA, endEA, startQuat, endQuat);
-};
-
-std::pair<glm::mat4, glm::mat4> calculateModelMatrices(SymMemory* memory, RotationSet rotSet, float t)
-{
-	// position calculations
 	glm::vec3 posLerp = glm::mix(
 		memory->params.startPos,
 		memory->params.endPos, t);
-	glm::quat posSlerp = glm::slerp(
-		glm::quat(0.f, memory->params.startPos.x, memory->params.startPos.y, memory->params.startPos.z),
-		glm::quat(0.f, memory->params.endPos.x, memory->params.endPos.y, memory->params.endPos.z), t);
 	glm::mat4 translateLerp = glm::translate(glm::mat4(1.f), posLerp);
-	glm::mat4 translateSlerp = glm::translate(glm::mat4(1.f), glm::vec3(posSlerp.x, posSlerp.y, posSlerp.z));
 
-	glm::vec3 angleLerp = glm::mix(rotSet.startEA, rotSet.endEA, t);
-	glm::quat angleSlerp = glm::slerp(rotSet.startQuat, rotSet.endQuat, t);
-	glm::mat4 rotationLerp = createRotationMatrixFromEulerAngles(angleLerp);
+	glm::quat angleSlerp = glm::slerp(memory->params.startQuat, memory->params.endQuat, t);
 	glm::mat4 rotationSlerp = glm::mat4_cast(angleSlerp);
 
-	return { translateLerp * rotationLerp, translateSlerp * rotationSlerp };
+	// temporary return same values
+	return { translateLerp * rotationSlerp, translateLerp * rotationSlerp };
 };
 
 void calculationThread(SymMemory* memory)
 {
 	std::chrono::high_resolution_clock::time_point calc_start, calc_end, wait_start;
-
-	RotationSet rotSet = calcRotationSet(memory);
 
 	while (!memory->terminateThread) {
 
@@ -209,10 +87,10 @@ void calculationThread(SymMemory* memory)
 			memory->terminateThread = true;
 		}
 
-		auto [modelLerp, modelSlerp] = calculateModelMatrices(memory, rotSet, t);
+		auto [modelLeft, modelRight] = calculateModelMatrices(memory, t);
 
-		memory->data.leftModels = { modelLerp };
-		memory->data.rightModels = { modelSlerp };
+		memory->data.leftModels = { modelLeft };
+		memory->data.rightModels = { modelRight };
 
 		memory->mutex.unlock();
 

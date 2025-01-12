@@ -122,7 +122,7 @@ int main() {
     #pragma endregion
 
 	// simulation
-    memory = new SymMemory(startPos, endPos, speed.GetValue(), mode == 0, glm::vec4(), glm::vec4());
+    memory = new SymMemory(startPos, endPos, speed.GetValue(), glm::quat(), glm::quat());
     data = memory->data;
     calcThread = std::thread(calculationThread, memory);
 
@@ -239,10 +239,10 @@ int main() {
 			calcThread.join();
 
             if (mode == 0) {
-                memory = new SymMemory(startPos, endPos, speed.GetValue(), true, glm::vec4(startEA, 0), glm::vec4(endEA, 0));
+                memory = new SymMemory(startPos, endPos, speed.GetValue(), glm::quat(glm::radians(startEA)), glm::quat(glm::radians(endEA)));
 			}
             else {
-                memory = new SymMemory(startPos, endPos, speed.GetValue(), false, glm::vec4(startQ.x, startQ.y, startQ.z, startQ.w), glm::vec4(endQ.x, endQ.y, endQ.z, endQ.w));
+                memory = new SymMemory(startPos, endPos, speed.GetValue(), glm::normalize(startQ), glm::normalize(endQ));
             }
             data = memory->data;
 			calcThread = std::thread(calculationThread, memory);
