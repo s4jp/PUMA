@@ -44,9 +44,7 @@ void window_size_callback(GLFWwindow *window, int width, int height);
 int viewLoc, projLoc, colorLoc;
 int phongModelLoc, phongViewLoc, phongProjLoc, phongColorLoc;
 
-bool animation = true;
 ControlledInputFloat speed("Speed", 2.f, 0.01f, 0.01f);
-ControlledInputInt frames("Frames", 7, 1, 2);
 glm::vec3 startPos(0.f);
 glm::vec3 endPos(3.f, 6.f, 9.f);
 static int mode = 0;
@@ -54,8 +52,6 @@ glm::vec3 startEA(0.f);
 glm::vec3 endEA(0.f);
 glm::quat startQ(1.f, 0.f, 0.f, 0.f);
 glm::quat endQ(1.f, 0.f, 0.f, 0.f);
-bool slerpRotation = true;
-bool slerpTranslation = true;
 
 SymMemory* memory;
 SymData data;
@@ -126,7 +122,7 @@ int main() {
     #pragma endregion
 
 	// simulation
-    memory = new SymMemory(startPos, endPos, speed.GetValue(), mode == 0, slerpRotation, glm::vec4(), glm::vec4(), animation, frames.GetValue(), slerpTranslation);
+    memory = new SymMemory(startPos, endPos, speed.GetValue(), mode == 0, glm::vec4(), glm::vec4());
     data = memory->data;
     calcThread = std::thread(calculationThread, memory);
 
@@ -232,13 +228,8 @@ int main() {
 			break;
         }
         ImGui::Spacing();
-		ImGui::Text("Use SLERP for quat:");
-		ImGui::Checkbox("Rotation", &slerpRotation); ImGui::SameLine();
-		ImGui::Checkbox("Translation", &slerpTranslation);
-
         ImGui::SeparatorText("Options:");
-        ImGui::Checkbox("Animation", &animation);
-        if (animation) speed.Render(); else frames.Render();
+        speed.Render();
 
         ImGui::Spacing();
         if (ImGui::Button("Run", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
@@ -248,10 +239,10 @@ int main() {
 			calcThread.join();
 
             if (mode == 0) {
-				memory = new SymMemory(startPos, endPos, speed.GetValue(), true, slerpRotation, glm::vec4(startEA, 0), glm::vec4(endEA, 0), animation, frames.GetValue(), slerpTranslation);
+                memory = new SymMemory(startPos, endPos, speed.GetValue(), true, glm::vec4(startEA, 0), glm::vec4(endEA, 0));
 			}
             else {
-                memory = new SymMemory(startPos, endPos, speed.GetValue(), false, slerpRotation, glm::vec4(startQ.x, startQ.y, startQ.z, startQ.w), glm::vec4(endQ.x, endQ.y, endQ.z, endQ.w), animation, frames.GetValue(), slerpTranslation);
+                memory = new SymMemory(startPos, endPos, speed.GetValue(), false, glm::vec4(startQ.x, startQ.y, startQ.z, startQ.w), glm::vec4(endQ.x, endQ.y, endQ.z, endQ.w));
             }
             data = memory->data;
 			calcThread = std::thread(calculationThread, memory);

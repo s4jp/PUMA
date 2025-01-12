@@ -97,15 +97,11 @@ struct SymParams {
 	glm::vec3 endPos;
 	float speed;
 	bool isEA;
-	bool rightSlerp;
 	glm::vec4 startParam;
 	glm::vec4 endParam;
-	bool animation;
-	int frames;
-	bool slerpTranslation;
 
-	SymParams(glm::vec3 startPos, glm::vec3 endPos, float speed, bool isEA, bool rightSlerp, glm::vec4 startParam, glm::vec4 endParam, bool animation, int frames, bool slerpTranslation) :
-		startPos(startPos), endPos(endPos), speed(speed), isEA(isEA), rightSlerp(rightSlerp), startParam(startParam), endParam(endParam), animation(animation), frames(frames), slerpTranslation(slerpTranslation) {}
+	SymParams(glm::vec3 startPos, glm::vec3 endPos, float speed, bool isEA, glm::vec4 startParam, glm::vec4 endParam) :
+		startPos(startPos), endPos(endPos), speed(speed), isEA(isEA), startParam(startParam), endParam(endParam) {}
 };
 
 struct SymData {
@@ -124,8 +120,8 @@ struct SymMemory {
 	std::atomic<bool> terminateThread;
 	std::atomic<float> sleep_debt;
 
-	SymMemory(glm::vec3 startPos, glm::vec3 endPos, float speed, bool isEA, bool rightSlerp, glm::vec4 startParam, glm::vec4 endParam, bool animation, int frames, bool slerpTranslation) :
-		params(startPos, endPos, speed, isEA, rightSlerp, startParam, endParam, animation, frames, slerpTranslation), data()
+	SymMemory(glm::vec3 startPos, glm::vec3 endPos, float speed, bool isEA, glm::vec4 startParam, glm::vec4 endParam) :
+		params(startPos, endPos, speed, isEA, startParam, endParam), data()
 	{
 		terminateThread = false;
 		sleep_debt = 0.f;
@@ -180,10 +176,10 @@ std::pair<glm::mat4, glm::mat4> calculateModelMatrices(SymMemory* memory, Rotati
 		glm::quat(0.f, memory->params.startPos.x, memory->params.startPos.y, memory->params.startPos.z),
 		glm::quat(0.f, memory->params.endPos.x, memory->params.endPos.y, memory->params.endPos.z), t);
 	glm::mat4 translateLerp = glm::translate(glm::mat4(1.f), posLerp);
-	glm::mat4 translateSlerp = memory->params.slerpTranslation ? glm::translate(glm::mat4(1.f), glm::vec3(posSlerp.x, posSlerp.y, posSlerp.z)) : translateLerp;
+	glm::mat4 translateSlerp = glm::translate(glm::mat4(1.f), glm::vec3(posSlerp.x, posSlerp.y, posSlerp.z));
 
 	glm::vec3 angleLerp = glm::mix(rotSet.startEA, rotSet.endEA, t);
-	glm::quat angleSlerp = memory->params.rightSlerp ? glm::slerp(rotSet.startQuat, rotSet.endQuat, t) : glm::lerp(rotSet.startQuat, rotSet.endQuat, t);
+	glm::quat angleSlerp = glm::slerp(rotSet.startQuat, rotSet.endQuat, t);
 	glm::mat4 rotationLerp = createRotationMatrixFromEulerAngles(angleLerp);
 	glm::mat4 rotationSlerp = glm::mat4_cast(angleSlerp);
 
@@ -202,36 +198,21 @@ void calculationThread(SymMemory* memory)
 
 		memory->mutex.lock();
 
-		if (!memory->params.animation) {
-			memory->data.leftModels = {};
-			memory->data.rightModels = {};
+		memory->data.time += dt / 1000.f;
 
-			for (int i = 0; i < memory->params.frames; i++) {
-				float t = i / (float)(memory->params.frames - 1);
-				auto [modelLerp, modelSlerp] = calculateModelMatrices(memory, rotSet, t);
-				memory->data.leftModels.push_back(modelLerp);
-				memory->data.rightModels.push_back(modelSlerp);
-			}
-
+		// t calculations
+		float fullDistance = glm::distance(memory->params.startPos, memory->params.endPos);
+		float coveredDistance = memory->data.time * memory->params.speed;
+		float t = fullDistance == 0 ? 0 : coveredDistance / fullDistance;
+		if (t >= 1) {
+			t = 1;
 			memory->terminateThread = true;
 		}
-		else {
-			memory->data.time += dt / 1000.f;
 
-			// t calculations
-			float fullDistance = glm::distance(memory->params.startPos, memory->params.endPos);
-			float coveredDistance = memory->data.time * memory->params.speed;
-			float t = fullDistance == 0 ? 0 : coveredDistance / fullDistance;
-			if (t >= 1) {
-				t = 1;
-				memory->terminateThread = true;
-			}
+		auto [modelLerp, modelSlerp] = calculateModelMatrices(memory, rotSet, t);
 
-			auto [modelLerp, modelSlerp] = calculateModelMatrices(memory, rotSet, t);
-
-			memory->data.leftModels = { modelLerp };
-			memory->data.rightModels = { modelSlerp };
-		}
+		memory->data.leftModels = { modelLerp };
+		memory->data.rightModels = { modelSlerp };
 
 		memory->mutex.unlock();
 
