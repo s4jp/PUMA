@@ -46,7 +46,7 @@ glm::mat4 proj;
 
 void window_size_callback(GLFWwindow *window, int width, int height);
 void launchCalcThread();
-void phongRenderCalls(std::array<glm::mat4, 5> models, float q2);
+void phongRenderCalls(std::array<glm::mat4, 5> models, float q2, glm::vec3 lengths);
 glm::vec3 changeCoordianteSystem(glm::vec3 vec);
 
 int viewLoc, projLoc, colorLoc;
@@ -180,11 +180,11 @@ int main() {
 
 		// render left side
         glViewport(0, 0, camera->GetWidth(), camera->GetHeight());
-		phongRenderCalls(data.leftModels, data.q2s.at(0));
+		phongRenderCalls(data.leftModels, data.q2s.at(0), data.lengths);
 
 		// render right side
         glViewport(camera->GetWidth(), 0, camera->GetWidth(), camera->GetHeight());
-		phongRenderCalls(data.rightModels, data.q2s.at(1));
+		phongRenderCalls(data.rightModels, data.q2s.at(1), data.lengths);
 
         // imgui rendering
         ImGui::Begin("Menu", 0,
@@ -294,23 +294,23 @@ void launchCalcThread()
         endQuat = glm::normalize(endQ);
     }
 
-	memory = new SymMemory(
-        Frame(changeCoordianteSystem(startPos), startQuat), 
-        Frame(changeCoordianteSystem(endPos), endQuat), 
-        speed.GetValue(), l1.GetValue(), l3.GetValue(), l4.GetValue());
+    memory = new SymMemory(
+        Frame(changeCoordianteSystem(startPos), startQuat),
+        Frame(changeCoordianteSystem(endPos), endQuat),
+        speed.GetValue(), glm::vec3(l1.GetValue(), l3.GetValue(), l4.GetValue()));
     data = memory->data;
     calcThread = std::thread(calculationThread, memory);
 }
 
-void phongRenderCalls(std::array<glm::mat4,5> models, float q2)
+void phongRenderCalls(std::array<glm::mat4,5> models, float q2, glm::vec3 lengths)
 {
-    glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(0) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, l1.GetValue()))));
+    glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(0) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, lengths.x))));
     cylinder->Render(phongColorLoc);
     glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(1) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, q2))));
     cylinder->Render(phongColorLoc);
-    glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(2) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, l3.GetValue()))));
+    glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(2) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, lengths.y))));
     cylinder->Render(phongColorLoc);
-    glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(3) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, l4.GetValue()))));
+    glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(3) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, lengths.z))));
     cylinder->Render(phongColorLoc);
 
     for (auto& model : models) {

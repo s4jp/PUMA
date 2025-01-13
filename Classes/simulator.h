@@ -71,12 +71,10 @@ struct SymParams {
 	Frame startFrame;
 	Frame endFrame;
 	float speed;
-	float l1;
-	float l3;
-	float l4;
+	glm::vec3 lengths;
 
-	SymParams(Frame startFrame, Frame endFrame, float speed, float l1, float l3, float l4) :
-		startFrame(startFrame), endFrame(endFrame), speed(speed), l1(l1), l3(l3), l4(l4) {}
+	SymParams(Frame startFrame, Frame endFrame, float speed, glm::vec3 lengths) :
+		startFrame(startFrame), endFrame(endFrame), speed(speed), lengths(lengths) {}
 };
 
 struct SymData {
@@ -84,6 +82,7 @@ struct SymData {
 	std::array<glm::mat4, 5> rightModels;
 	std::array<float, 2> q2s;
 	float time;
+	glm::vec3 lengths;
 
 	SymData() : time(0.f) {}
 };
@@ -96,8 +95,8 @@ struct SymMemory {
 	std::atomic<bool> terminateThread;
 	std::atomic<float> sleep_debt;
 
-	SymMemory(Frame startFrame, Frame endFrame, float speed, float l1, float l3, float l4) :
-		params(startFrame, endFrame, speed, l1, l3, l4), data()
+	SymMemory(Frame startFrame, Frame endFrame, float speed, glm::vec3 lengths) :
+		params(startFrame, endFrame, speed, lengths), data()
 	{
 		terminateThread = false;
 		sleep_debt = 0.f;
@@ -122,15 +121,15 @@ float normalizeAngle(const float angle) {
 	return newAngle;
 }
 
-IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const float l3, const float l4) 
+IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& lengths)
 {
 	// calculate joints positions
 	glm::vec3 p0 = baseFrame.GetOrigin();
 	glm::vec3 p1 = p0;
-	glm::vec3 p2 = p1 + baseFrame.GetZ() * l1;
+	glm::vec3 p2 = p1 + baseFrame.GetZ() * lengths.x;
 
 	glm::vec3 p5 = effectorFrame.GetOrigin();
-	glm::vec3 p4 = p5 - effectorFrame.GetX() * l4;
+	glm::vec3 p4 = p5 - effectorFrame.GetX() * lengths.z;
 
 	glm::vec3 v40 = glm::normalize(p4 - p0);
 	glm::vec3 v20 = glm::normalize(p2 - p0);
@@ -139,7 +138,7 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 
 	glm::vec3 v34 = glm::normalize(glm::cross(norm, effectorFrame.GetX()));
 	// todo: check if v34 and efectorFrame.GetX() are parallel
-	glm::vec3 p3 = p4 - v34 * l3;
+	glm::vec3 p3 = p4 - v34 * lengths.y;
 	// todo: handle +- v34
 
 	//-----------------------------------------------------------------------------//
@@ -158,7 +157,7 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 	float alpha2 = -atan2(glm::dot(v32, F1.GetZ()), glm::dot(v32, F1.GetX()));
 	alpha2 = normalizeAngle(alpha2);
 	Frame F2 = Frame(F1);
-	F2.Translate(F1.GetZ() * l1);
+	F2.Translate(F1.GetZ() * lengths.x);
 	F2.Rotate(glm::angleAxis(alpha2, F1.GetY()));
 
 	glm::vec3 x3 = glm::normalize(glm::cross(F2.GetY(), glm::normalize(p3 - p4)));
@@ -172,7 +171,7 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 	float alpha4 = atan2(glm::dot(x5, F3.GetY()), glm::dot(x5, F3.GetX()));
 	alpha4 = normalizeAngle(alpha4);
 	Frame F4 = Frame(F3);
-	F4.Translate(F3.GetZ() * -l3);
+	F4.Translate(F3.GetZ() * -lengths.y);
 	F4.Rotate(glm::angleAxis(alpha4, F3.GetZ()));
 
 	glm::vec3 z4 = p3 - p4;
@@ -181,7 +180,7 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 	float alpha5 = M_PI / 2.0f - atan2(glm::dot(z5, z4), -glm::dot(z5, y4));
 	alpha5 = normalizeAngle(alpha5);
 	Frame F5 = Frame(F4);
-	F5.Translate(F4.GetX() * l4);
+	F5.Translate(F4.GetX() * lengths.z);
 	F5.Rotate(glm::angleAxis(alpha5, F4.GetX()));
 
 	//// test found values
@@ -201,13 +200,13 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 		{ F1, F2, F3, F4, F5 });
 }
 
-std::array<Frame, 5> calculateFramesFromConfSpace(ConfigurationSpace configSpace, float l1, float l3, float l4)
+std::array<Frame, 5> calculateFramesFromConfSpace(ConfigurationSpace configSpace, glm::vec3 lengths)
 {
 	Frame F1 = Frame(baseFrame);
 	F1.Rotate(glm::angleAxis(configSpace.alpha1, baseFrame.GetZ()));
 
 	Frame F2 = Frame(F1);
-	F2.Translate(F1.GetZ() * l1);
+	F2.Translate(F1.GetZ() * lengths.x);
 	F2.Rotate(glm::angleAxis(configSpace.alpha2, F1.GetY()));
 
 	Frame F3 = Frame(F2);
@@ -215,11 +214,11 @@ std::array<Frame, 5> calculateFramesFromConfSpace(ConfigurationSpace configSpace
 	F3.Rotate(glm::angleAxis(configSpace.alpha3, F2.GetY()));
 
 	Frame F4 = Frame(F3);
-	F4.Translate(F3.GetZ() * -l3);
+	F4.Translate(F3.GetZ() * -lengths.y);
 	F4.Rotate(glm::angleAxis(configSpace.alpha4, F3.GetZ()));
 
 	Frame F5 = Frame(F4);
-	F5.Translate(F4.GetX() * l4);
+	F5.Translate(F4.GetX() * lengths.z);
 	F5.Rotate(glm::angleAxis(configSpace.alpha5, F4.GetX()));
 
 	return { F1, F2, F3, F4, F5 };
@@ -248,9 +247,11 @@ void calculationThread(SymMemory* memory)
 {
 	std::chrono::high_resolution_clock::time_point calc_start, calc_end, wait_start;
 
-	IKSet startIK = solveInverseKinematics(memory->params.startFrame, memory->params.l1, memory->params.l3, memory->params.l4);
-	IKSet endIK = solveInverseKinematics(memory->params.endFrame, memory->params.l1, memory->params.l3, memory->params.l4);
+	IKSet startIK = solveInverseKinematics(memory->params.startFrame, memory->params.lengths);
+	IKSet endIK = solveInverseKinematics(memory->params.endFrame, memory->params.lengths);
 	ConfigurationSpace directions = calculateIterpolationDirection(startIK.configSpace, endIK.configSpace);
+
+	memory->data.lengths = memory->params.lengths;
 
 	while (!memory->terminateThread) {
 
@@ -267,9 +268,8 @@ void calculationThread(SymMemory* memory)
 			memory->terminateThread = true;
 		}
 		ConfigurationSpace currCS = startIK.configSpace + directions * t;
-		std::array<Frame, 5> currFrames = calculateFramesFromConfSpace(currCS, memory->params.l1, memory->params.l3, memory->params.l4);
-		IKSet currIK = solveInverseKinematics(interpolateFrames(memory->params.startFrame, memory->params.endFrame, t),
-			memory->params.l1, memory->params.l3, memory->params.l4);
+		std::array<Frame, 5> currFrames = calculateFramesFromConfSpace(currCS, memory->params.lengths);
+		IKSet currIK = solveInverseKinematics(interpolateFrames(memory->params.startFrame, memory->params.endFrame, t), memory->params.lengths);
 
 		// F1, F2, F3, F4, F5
 		memory->data.leftModels = {
