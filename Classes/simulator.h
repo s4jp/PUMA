@@ -7,6 +7,7 @@
 #include <glm/gtx/quaternion.hpp>
 #include <vector>
 #include <Frame.h>
+#include <array>
 
 static int dt = 10;		// in milliseconds
 const Frame baseFrame = Frame();
@@ -34,22 +35,12 @@ struct Joints {
 		p1(p1), p2(p2), p3(p3), p4(p4), p5(p5) {}
 };
 
-struct Frames {
-	Frame F1;
-	Frame F2;
-	Frame F3;
-	Frame F4;
-
-	Frames(Frame F1, Frame F2, Frame F3, Frame F4) :
-		F1(F1), F2(F2), F3(F3), F4(F4) {}
-};
-
 struct IKSet {
 	Joints joints;
 	ConfigurationSpace configSpace;
-	Frames frames;
+	std::array<Frame,5> frames;
 
-	IKSet(Joints joints, ConfigurationSpace configSpace, Frames frames) :
+	IKSet(Joints joints, ConfigurationSpace configSpace, std::array<Frame, 5> frames) :
 		joints(joints), configSpace(configSpace), frames(frames) {}
 };
 
@@ -66,11 +57,12 @@ struct SymParams {
 };
 
 struct SymData {
-	std::vector<glm::mat4> leftModels;
-	std::vector<glm::mat4> rightModels;
+	std::array<glm::mat4, 5> leftModels;
+	std::array<glm::mat4, 5> rightModels;
+	std::array<float, 2> q2s;
 	float time;
 
-	SymData() : time(0.f) {	}
+	SymData() : time(0.f) {}
 };
 
 struct SymMemory {
@@ -181,7 +173,7 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 	return IKSet(
 		Joints(p1, p2, p3, p4, p5), 
 		ConfigurationSpace(alpha1, alpha2, q2, alpha3, alpha4, alpha5), 
-		Frames(F1, F2, F3, F4));
+		{ F1, F2, F3, F4, F5 });
 }
 
 Frame interpolateFrames(Frame startFrame, Frame endFrame, const float t)
@@ -221,17 +213,20 @@ void calculationThread(SymMemory* memory)
 		IKSet currIK = solveInverseKinematics(interpolatedFrame,
 			memory->params.l1, memory->params.l3, memory->params.l4);
 
+		// DEBUG PRINT
 		if (t == 1) {
 			//compare GetModel() with GetMatrix()
-			glm::mat4 model1 = currIK.frames.F1.GetModel();
-			glm::mat4 model2 = currIK.frames.F2.GetModel();
-			glm::mat4 model3 = currIK.frames.F3.GetModel();
-			glm::mat4 model4 = currIK.frames.F4.GetModel();
+			glm::mat4 model1 = currIK.frames.at(0).GetModel();
+			glm::mat4 model2 = currIK.frames.at(1).GetModel();
+			glm::mat4 model3 = currIK.frames.at(2).GetModel();
+			glm::mat4 model4 = currIK.frames.at(3).GetModel();
+			glm::mat4 model5 = currIK.frames.at(4).GetModel();
 
-			glm::mat4 matrix1 = currIK.frames.F1.GetMatrix();
-			glm::mat4 matrix2 = currIK.frames.F2.GetMatrix();
-			glm::mat4 matrix3 = currIK.frames.F3.GetMatrix();
-			glm::mat4 matrix4 = currIK.frames.F4.GetMatrix();
+			glm::mat4 matrix1 = currIK.frames.at(0).GetMatrix();
+			glm::mat4 matrix2 = currIK.frames.at(1).GetMatrix();
+			glm::mat4 matrix3 = currIK.frames.at(2).GetMatrix();
+			glm::mat4 matrix4 = currIK.frames.at(3).GetMatrix();
+			glm::mat4 matrix5 = currIK.frames.at(4).GetMatrix();
 
 			std::cout << "M1: " << std::endl;
 			CAD::printMatrix(model1);
@@ -256,21 +251,31 @@ void calculationThread(SymMemory* memory)
 			std::cout << "----------------------------" << std::endl;
 			CAD::printMatrix(matrix4);
 			std::cout << std::endl;
+
+			std::cout << "M5: " << std::endl;
+			CAD::printMatrix(model5);
+			std::cout << "----------------------------" << std::endl;
+			CAD::printMatrix(matrix5);
+			std::cout << std::endl;
 		}
 
 		memory->data.leftModels = {
-			currIK.frames.F1.GetModel() * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l1)),
-			currIK.frames.F2.GetModel() * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, currIK.configSpace.q2)),
-			currIK.frames.F3.GetModel() * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l3)),
-			currIK.frames.F4.GetModel() * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l4))
+			currIK.frames.at(0).GetModel(),
+			currIK.frames.at(1).GetModel(),
+			currIK.frames.at(2).GetModel(),
+			currIK.frames.at(3).GetModel(),
+			currIK.frames.at(4).GetModel()
 		};
 
 		memory->data.rightModels = {
-			currIK.frames.F1.GetMatrix()* glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l1)),
-			currIK.frames.F2.GetMatrix()* glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, currIK.configSpace.q2)),
-			currIK.frames.F3.GetMatrix()* glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l3)),
-			currIK.frames.F4.GetMatrix()* glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l4))
+			currIK.frames.at(0).GetMatrix(),
+			currIK.frames.at(1).GetMatrix(),
+			currIK.frames.at(2).GetMatrix(),
+			currIK.frames.at(3).GetMatrix(),
+			currIK.frames.at(4).GetMatrix()
 		};
+
+		memory->data.q2s = { currIK.configSpace.q2, currIK.configSpace.q2 };
 
 		memory->mutex.unlock();
 

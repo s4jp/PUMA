@@ -87,7 +87,7 @@
     <ClCompile Include="Classes\grid.cpp">
       <Filter>Source Files\figures</Filter>
     </ClCompile>
-    <ClCompile Include="Classes\cylinder.cpp">
+    <ClCompile Include="Classes\mesh.cpp">
       <Filter>Source Files\figures</Filter>
     </ClCompile>
     <ClCompile Include="Classes\Frame.cpp">
@@ -155,7 +155,7 @@
     <ClInclude Include="Classes\Parser.h">
       <Filter>Header Files\assets</Filter>
     </ClInclude>
-    <ClInclude Include="Classes\cylinder.h">
+    <ClInclude Include="Classes\mesh.h">
       <Filter>Header Files\figures</Filter>
     </ClInclude>
     <ClInclude Include="Classes\ControlledInputFloat.h">

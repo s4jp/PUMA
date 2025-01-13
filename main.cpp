@@ -22,7 +22,7 @@
 #include "EBO.h"
 #include "Camera.h"
 #include "Grid.h"
-#include "cylinder.h"
+#include "mesh.h"
 #include "ControlledInputFloat.h"
 #include "ControlledInputInt.h"
 #include "simulator.h"
@@ -35,13 +35,18 @@ const int dispCount = 2;
 
 Camera *camera;
 Grid* grid;
-Cylinder* cylinder;
+Mesh* cylinder;
+Mesh* sphere;
+Mesh* pointerX;
+Mesh* pointerY;
+Mesh* pointerZ;
 
 glm::mat4 view;
 glm::mat4 proj;
 
 void window_size_callback(GLFWwindow *window, int width, int height);
 void launchCalcThread();
+void phongRenderCalls(std::array<glm::mat4, 5> models, float q2);
 
 int viewLoc, projLoc, colorLoc;
 int phongModelLoc, phongViewLoc, phongProjLoc, phongColorLoc;
@@ -113,7 +118,11 @@ int main() {
     camera->PrepareMatrices(view, proj);
 
     grid = new Grid();
-	cylinder = new Cylinder("Meshes\\cylinder.obj", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+	cylinder = new Mesh("Meshes\\cylinder.obj", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
+	sphere = new Mesh("Meshes\\sphere.obj", glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+	pointerX = new Mesh("Meshes\\pointerX.obj", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+	pointerY = new Mesh("Meshes\\pointerY.obj", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+	pointerZ = new Mesh("Meshes\\pointerZ.obj", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
 
     #pragma region imgui_boilerplate
     IMGUI_CHECKVERSION();
@@ -170,17 +179,11 @@ int main() {
 
 		// render left side
         glViewport(0, 0, camera->GetWidth(), camera->GetHeight());
-		for (auto& model : data.leftModels) {
-            glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            cylinder->Render(phongColorLoc);
-		}
+		phongRenderCalls(data.leftModels, data.q2s.at(0));
 
 		// render right side
         glViewport(camera->GetWidth(), 0, camera->GetWidth(), camera->GetHeight());
-		for (auto& model : data.rightModels) {
-			glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            cylinder->Render(phongColorLoc);
-		}
+		phongRenderCalls(data.rightModels, data.q2s.at(1));
 
         // imgui rendering
         ImGui::Begin("Menu", 0,
@@ -293,4 +296,26 @@ void launchCalcThread()
 	memory = new SymMemory(Frame(startPos, startQuat), Frame(endPos, endQuat), speed.GetValue(), l1.GetValue(), l3.GetValue(), l4.GetValue());
     data = memory->data;
     calcThread = std::thread(calculationThread, memory);
+}
+
+void phongRenderCalls(std::array<glm::mat4,5> models, float q2)
+{
+    glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(0) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, l1.GetValue()))));
+    cylinder->Render(phongColorLoc);
+    glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(1) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, q2))));
+    cylinder->Render(phongColorLoc);
+    glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(2) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, l3.GetValue()))));
+    cylinder->Render(phongColorLoc);
+    glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(models.at(3) * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, l4.GetValue()))));
+    cylinder->Render(phongColorLoc);
+
+    for (auto& model : models) {
+        glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        if (model == models.back()) continue;
+        sphere->Render(phongColorLoc);
+    }
+
+    pointerX->Render(phongColorLoc);
+    pointerY->Render(phongColorLoc);
+    pointerZ->Render(phongColorLoc);
 }

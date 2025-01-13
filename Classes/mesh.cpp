@@ -1,11 +1,11 @@
-#include "cylinder.h"
+#include "mesh.h"
 #include "Parser.h"
 #include <glm/gtc/type_ptr.hpp>
 
-Cylinder::Cylinder(std::string path, glm::vec4 color)
+Mesh::Mesh(std::string path, glm::vec4 color)
 	: Figure(Parser::ParseObj(path)), color(color) {}
 
-void Cylinder::Render(int colorLoc)
+void Mesh::Render(int colorLoc)
 {
 	vao.Bind();
 
