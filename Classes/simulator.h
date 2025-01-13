@@ -99,22 +99,22 @@ struct SymMemory {
 //	return { translateLerp * rotationSlerp, translateLerp * rotationSlerp };
 //};
 
-IKSet solveInverseKinematics(const Frame& efectorFrame, const float l1, const float l3, const float l4) 
+IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const float l3, const float l4) 
 {
 	// calculate joints positions
 	glm::vec3 p0 = baseFrame.GetOrigin();
 	glm::vec3 p1 = p0;
 	glm::vec3 p2 = p1 + baseFrame.GetZ() * l1;
 
-	glm::vec3 p5 = efectorFrame.GetOrigin();
-	glm::vec3 p4 = p5 - efectorFrame.GetX() * l4;
+	glm::vec3 p5 = effectorFrame.GetOrigin();
+	glm::vec3 p4 = p5 - effectorFrame.GetX() * l4;
 
 	glm::vec3 v40 = glm::normalize(p4 - p0);
 	glm::vec3 v20 = glm::normalize(p2 - p0);
 	glm::vec3 norm = glm::normalize(glm::cross(v40, v20));
 	// todo: check if v40 and v20 are parallel
 
-	glm::vec3 v34 = glm::normalize(glm::cross(norm, efectorFrame.GetX()));
+	glm::vec3 v34 = glm::normalize(glm::cross(norm, effectorFrame.GetX()));
 	// todo: check if v34 and efectorFrame.GetX() are parallel
 	glm::vec3 p3 = p4 - v34 * l3;
 	// todo: handle +- v34
@@ -130,50 +130,35 @@ IKSet solveInverseKinematics(const Frame& efectorFrame, const float l1, const fl
 	v40 = p4 - p0;
 	float alpha1 = atan2(glm::dot(v40, baseFrame.GetY()), glm::dot(v40, baseFrame.GetX()));
 	Frame F1 = baseFrame;
-	//F1.Translate(p1 - p0);
 	F1.Rotate(glm::angleAxis(alpha1, baseFrame.GetZ()));
 
 	glm::vec3 v32 = p3 - p2;
-	float alpha2 = atan2(glm::dot(v32, F1.GetZ()), glm::dot(v32, F1.GetX()));
+	float alpha2 = -atan2(glm::dot(v32, F1.GetZ()), glm::dot(v32, F1.GetX()));
 	Frame F2 = F1;
-	F2.Translate(p2 - p1);
+	F2.Translate(F1.GetZ() * l1);
 	F2.Rotate(glm::angleAxis(alpha2, F1.GetY()));
 
-	// todo: handle v43 vs v53
-	glm::vec3 v53 = p5 - p3;
-	float alpha3 = -atan2(glm::dot(v53, F2.GetZ()), glm::dot(v53, F2.GetX()));
+	glm::vec3 x3 = glm::normalize(glm::cross(F2.GetY(), glm::normalize(p3 - p4)));
+	float alpha3 = -atan2(glm::dot(x3, F2.GetZ()), glm::dot(x3, F2.GetX()));
 	Frame F3 = F2;
-	F3.Translate(p3 - p2);
+	F3.Translate(F2.GetX() * q2);
 	F3.Rotate(glm::angleAxis(alpha3, F2.GetY()));
 
-	glm::vec3 x5 = efectorFrame.GetX();
+	glm::vec3 x5 = effectorFrame.GetX();
 	float alpha4 = atan2(glm::dot(x5, F3.GetY()), glm::dot(x5, F3.GetX()));
 	Frame F4 = F3;
-	F4.Translate(p4 - p3);
+	F4.Translate(F3.GetZ() * -l3);
 	F4.Rotate(glm::angleAxis(alpha4, F3.GetZ()));
 
-	glm::vec3 y5 = efectorFrame.GetY();
-	float alpha5 = atan2(glm::dot(y5, F4.GetZ()), glm::dot(y5, F4.GetX()));
+	glm::vec3 z4 = p3 - p4;
+	glm::vec3 y4 = glm::cross(z4, x5);
+	glm::vec3 z5 = effectorFrame.GetZ();
+	float alpha5 = M_PI / 2.0f - atan2(glm::dot(z5, z4), -glm::dot(z5, y4));
 	Frame F5 = F4;
-	F5.Translate(p5 - p4);
+	F5.Translate(F4.GetX() * l4);
 	F5.Rotate(glm::angleAxis(alpha5, F4.GetX()));
 
 	ConfigurationSpace configSpace(alpha1, alpha2, q2, alpha3, alpha4, alpha5);
-
-	//print comparison between joints and configuration space origins
-	std::cout << "p0: " << p0.x << " " << p0.y << " " << p0.z << std::endl;
-	std::cout << "fp0: " << baseFrame.GetOrigin().x << " " << baseFrame.GetOrigin().y << " " << baseFrame.GetOrigin().z << std::endl << std::endl;
-	std::cout << "p1: " << p1.x << " " << p1.y << " " << p1.z << std::endl;
-	std::cout << "fp1: " << F1.GetOrigin().x << " " << F1.GetOrigin().y << " " << F1.GetOrigin().z << std::endl << std::endl;
-	std::cout << "p2: " << p2.x << " " << p2.y << " " << p2.z << std::endl;
-	std::cout << "fp2: " << F2.GetOrigin().x << " " << F2.GetOrigin().y << " " << F2.GetOrigin().z << std::endl << std::endl;
-	std::cout << "p3: " << p3.x << " " << p3.y << " " << p3.z << std::endl;
-	std::cout << "fp3: " << F3.GetOrigin().x << " " << F3.GetOrigin().y << " " << F3.GetOrigin().z << std::endl << std::endl;
-	std::cout << "p4: " << p4.x << " " << p4.y << " " << p4.z << std::endl;
-	std::cout << "fp4: " << F4.GetOrigin().x << " " << F4.GetOrigin().y << " " << F4.GetOrigin().z << std::endl << std::endl;
-	std::cout << "p5: " << p5.x << " " << p5.y << " " << p5.z << std::endl;
-	std::cout << "fp5: " << F5.GetOrigin().x << " " << F5.GetOrigin().y << " " << F5.GetOrigin().z << std::endl << std::endl;
-	std::cout << "--------------------------------" << std::endl;
 
 	return IKSet(joints, configSpace);
 }

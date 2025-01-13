@@ -113,9 +113,9 @@ int main() {
     camera->PrepareMatrices(view, proj);
 
     grid = new Grid();
-	frame.push_back(new Pointer("Meshes\\pointerX.obj", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)));
-	frame.push_back(new Pointer("Meshes\\pointerY.obj", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)));
-	frame.push_back(new Pointer("Meshes\\pointerZ.obj", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)));
+	frame.push_back(new Pointer("Meshes\\cylinder.obj", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)));
+	//frame.push_back(new Pointer("Meshes\\pointerY.obj", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)));
+	//frame.push_back(new Pointer("Meshes\\pointerZ.obj", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)));
 
     #pragma region imgui_boilerplate
     IMGUI_CHECKVERSION();
