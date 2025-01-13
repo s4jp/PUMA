@@ -26,6 +26,14 @@ Frame::Frame(glm::vec3 translation, glm::quat rotation)
 	this->Rotate(rotation);
 }
 
+Frame::Frame(const Frame& frame)
+{
+	this->x = frame.x;
+	this->y = frame.y;
+	this->z = frame.z;
+	this->origin = frame.origin;
+}
+
 glm::vec3 Frame::GetX() const
 {
 	return x;
@@ -66,4 +74,9 @@ glm::mat4 Frame::GetMatrix() const
 	matrix[2] = glm::vec4(z, 0.f);
 	matrix[3] = glm::vec4(origin, 1.f);
 	return matrix;
+}
+
+glm::quat Frame::GetRotation() const
+{
+	return glm::quat_cast(glm::mat3(x, y, z));
 }

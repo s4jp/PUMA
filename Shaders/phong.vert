@@ -13,7 +13,8 @@ void main()
 {
     vec4 position = vec4(aPos, 1.0);
     vec4 worldPos = model * position;
-    fragPos = worldPos.xyz / worldPos.w;
-    gl_Position = proj * view * worldPos;
+    vec4 newWorldPos = vec4(worldPos.x, worldPos.z, -worldPos.y, worldPos.w);
+    fragPos = newWorldPos.xyz / newWorldPos.w;
+    gl_Position = proj * view * newWorldPos;
     normal = mat3(transpose(inverse(model))) * aNormal;
 }

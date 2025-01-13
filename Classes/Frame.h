@@ -13,6 +13,7 @@ public:
 	Frame();
 	Frame(glm::vec3 x, glm::vec3 y, glm::vec3 z, glm::vec3 origin);
 	Frame(glm::vec3 translation, glm::quat rotation);
+	Frame(const Frame& frame);
 
 	glm::vec3 GetX() const;
 	glm::vec3 GetY() const;
@@ -22,4 +23,5 @@ public:
 	void Rotate(glm::quat rotation);
 	void Translate(glm::vec3 translation);
 	glm::mat4 GetMatrix() const;
+	glm::quat GetRotation() const;
 };

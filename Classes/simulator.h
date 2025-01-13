@@ -34,12 +34,23 @@ struct Joints {
 		p1(p1), p2(p2), p3(p3), p4(p4), p5(p5) {}
 };
 
+struct Frames {
+	Frame F1;
+	Frame F2;
+	Frame F3;
+	Frame F4;
+
+	Frames(Frame F1, Frame F2, Frame F3, Frame F4) :
+		F1(F1), F2(F2), F3(F3), F4(F4) {}
+};
+
 struct IKSet {
 	Joints joints;
 	ConfigurationSpace configSpace;
+	Frames frames;
 
-	IKSet(Joints joints, ConfigurationSpace configSpace) :
-		joints(joints), configSpace(configSpace) {}
+	IKSet(Joints joints, ConfigurationSpace configSpace, Frames frames) :
+		joints(joints), configSpace(configSpace), frames(frames) {}
 };
 
 struct SymParams {
@@ -129,24 +140,24 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 	// todo: handle v30 vs v40
 	v40 = p4 - p0;
 	float alpha1 = atan2(glm::dot(v40, baseFrame.GetY()), glm::dot(v40, baseFrame.GetX()));
-	Frame F1 = baseFrame;
+	Frame F1 = Frame(baseFrame);
 	F1.Rotate(glm::angleAxis(alpha1, baseFrame.GetZ()));
 
 	glm::vec3 v32 = p3 - p2;
 	float alpha2 = -atan2(glm::dot(v32, F1.GetZ()), glm::dot(v32, F1.GetX()));
-	Frame F2 = F1;
+	Frame F2 = Frame(F1);
 	F2.Translate(F1.GetZ() * l1);
 	F2.Rotate(glm::angleAxis(alpha2, F1.GetY()));
 
 	glm::vec3 x3 = glm::normalize(glm::cross(F2.GetY(), glm::normalize(p3 - p4)));
 	float alpha3 = -atan2(glm::dot(x3, F2.GetZ()), glm::dot(x3, F2.GetX()));
-	Frame F3 = F2;
+	Frame F3 = Frame(F2);
 	F3.Translate(F2.GetX() * q2);
 	F3.Rotate(glm::angleAxis(alpha3, F2.GetY()));
 
 	glm::vec3 x5 = effectorFrame.GetX();
 	float alpha4 = atan2(glm::dot(x5, F3.GetY()), glm::dot(x5, F3.GetX()));
-	Frame F4 = F3;
+	Frame F4 = Frame(F3);
 	F4.Translate(F3.GetZ() * -l3);
 	F4.Rotate(glm::angleAxis(alpha4, F3.GetZ()));
 
@@ -154,13 +165,21 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 	glm::vec3 y4 = glm::cross(z4, x5);
 	glm::vec3 z5 = effectorFrame.GetZ();
 	float alpha5 = M_PI / 2.0f - atan2(glm::dot(z5, z4), -glm::dot(z5, y4));
-	Frame F5 = F4;
+	Frame F5 = Frame(F4);
 	F5.Translate(F4.GetX() * l4);
 	F5.Rotate(glm::angleAxis(alpha5, F4.GetX()));
 
 	ConfigurationSpace configSpace(alpha1, alpha2, q2, alpha3, alpha4, alpha5);
+	Frames frames(F1, F2, F3, F4);
 
-	return IKSet(joints, configSpace);
+	return IKSet(joints, configSpace, frames);
+}
+
+Frame interpolateFrames(Frame startFrame, Frame endFrame, const float t)
+{
+	glm::vec3 posLerp = glm::mix(startFrame.GetOrigin(), endFrame.GetOrigin(), t);
+	glm::quat angleSlerp = glm::slerp(startFrame.GetRotation(), endFrame.GetRotation(), t);
+	return Frame(posLerp, angleSlerp);
 }
 
 void calculationThread(SymMemory* memory)
@@ -184,11 +203,24 @@ void calculationThread(SymMemory* memory)
 			t = 1;
 			memory->terminateThread = true;
 		}
+		
+		IKSet currIK = solveInverseKinematics(
+			interpolateFrames(memory->params.startFrame, memory->params.endFrame, t),
+			memory->params.l1, memory->params.l3, memory->params.l4);
 
-		//auto [modelLeft, modelRight] = calculateModelMatrices(memory, t);
+		memory->data.leftModels = {
+			startIK.frames.F1.GetMatrix() * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l1)),
+			startIK.frames.F2.GetMatrix() * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, startIK.configSpace.q2)),
+			startIK.frames.F3.GetMatrix() * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l3)),
+			startIK.frames.F4.GetMatrix() * glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l4))
+		};
 
-		//memory->data.leftModels = { modelLeft };
-		//memory->data.rightModels = { modelRight };
+		memory->data.rightModels = {
+			glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l1)) * currIK.frames.F1.GetMatrix(),
+			glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, currIK.configSpace.q2)) * currIK.frames.F2.GetMatrix(),
+			//glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l3)) * currIK.frames.F3.GetMatrix(),
+			//glm::scale(glm::mat4(1.f), glm::vec3(1.f, 1.f, memory->params.l4)) * currIK.frames.F4.GetMatrix(),
+		};
 
 		memory->mutex.unlock();
 

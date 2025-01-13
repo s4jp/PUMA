@@ -22,7 +22,7 @@
 #include "EBO.h"
 #include "Camera.h"
 #include "Grid.h"
-#include "pointer.h"
+#include "cylinder.h"
 #include "ControlledInputFloat.h"
 #include "ControlledInputInt.h"
 #include "simulator.h"
@@ -35,7 +35,7 @@ const int dispCount = 2;
 
 Camera *camera;
 Grid* grid;
-std::vector<Pointer*> frame;
+Cylinder* cylinder;
 
 glm::mat4 view;
 glm::mat4 proj;
@@ -113,9 +113,7 @@ int main() {
     camera->PrepareMatrices(view, proj);
 
     grid = new Grid();
-	frame.push_back(new Pointer("Meshes\\cylinder.obj", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)));
-	//frame.push_back(new Pointer("Meshes\\pointerY.obj", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)));
-	//frame.push_back(new Pointer("Meshes\\pointerZ.obj", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)));
+	cylinder = new Cylinder("Meshes\\cylinder.obj", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
 
     #pragma region imgui_boilerplate
     IMGUI_CHECKVERSION();
@@ -173,19 +171,15 @@ int main() {
 		// render left side
         glViewport(0, 0, camera->GetWidth(), camera->GetHeight());
 		for (auto& model : data.leftModels) {
-			glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-			for (auto& pointer : frame) {
-				pointer->Render(phongColorLoc);
-			}
+            glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            cylinder->Render(phongColorLoc);
 		}
 
 		// render right side
         glViewport(camera->GetWidth(), 0, camera->GetWidth(), camera->GetHeight());
 		for (auto& model : data.rightModels) {
 			glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-			for (auto& pointer : frame) {
-				pointer->Render(phongColorLoc);
-			}
+            cylinder->Render(phongColorLoc);
 		}
 
         // imgui rendering

@@ -1,11 +1,11 @@
-#include "pointer.h"
+#include "cylinder.h"
 #include "Parser.h"
 #include <glm/gtc/type_ptr.hpp>
 
-Pointer::Pointer(std::string path, glm::vec4 color) 
+Cylinder::Cylinder(std::string path, glm::vec4 color)
 	: Figure(Parser::ParseObj(path)), color(color) {}
 
-void Pointer::Render(int colorLoc)
+void Cylinder::Render(int colorLoc)
 {
 	vao.Bind();
 

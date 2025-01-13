@@ -161,7 +161,7 @@
     <ClCompile Include="Classes\Frame.cpp" />
     <ClCompile Include="Classes\grid.cpp" />
     <ClCompile Include="Classes\helpers.cpp" />
-    <ClCompile Include="Classes\pointer.cpp" />
+    <ClCompile Include="Classes\cylinder.cpp" />
     <ClCompile Include="Classes\Shader.cpp" />
     <ClCompile Include="Classes\VAO.cpp" />
     <ClCompile Include="Classes\VBO.cpp" />
@@ -186,7 +186,7 @@
     <ClInclude Include="Classes\grid.h" />
     <ClInclude Include="Classes\helpers.h" />
     <ClInclude Include="Classes\Parser.h" />
-    <ClInclude Include="Classes\pointer.h" />
+    <ClInclude Include="Classes\cylinder.h" />
     <ClInclude Include="Classes\Shader.h" />
     <ClInclude Include="Classes\simulator.h" />
     <ClInclude Include="Classes\VAO.h" />
