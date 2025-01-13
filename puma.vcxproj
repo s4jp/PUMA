@@ -158,6 +158,7 @@
   <ItemGroup>
     <ClCompile Include="Classes\Camera.cpp" />
     <ClCompile Include="Classes\EBO.cpp" />
+    <ClCompile Include="Classes\Frame.cpp" />
     <ClCompile Include="Classes\grid.cpp" />
     <ClCompile Include="Classes\helpers.cpp" />
     <ClCompile Include="Classes\pointer.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="Classes\ControlledInputInt.h" />
     <ClInclude Include="Classes\EBO.h" />
     <ClInclude Include="Classes\figure.h" />
+    <ClInclude Include="Classes\Frame.h" />
     <ClInclude Include="Classes\grid.h" />
     <ClInclude Include="Classes\helpers.h" />
     <ClInclude Include="Classes\Parser.h" />

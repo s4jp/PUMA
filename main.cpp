@@ -27,6 +27,7 @@
 #include "ControlledInputInt.h"
 #include "simulator.h"
 #include <thread>
+#include "Frame.h"
 
 const float near = 0.1f;
 const float far = 300.0f;
@@ -40,11 +41,12 @@ glm::mat4 view;
 glm::mat4 proj;
 
 void window_size_callback(GLFWwindow *window, int width, int height);
+void launchCalcThread();
 
 int viewLoc, projLoc, colorLoc;
 int phongModelLoc, phongViewLoc, phongProjLoc, phongColorLoc;
 
-ControlledInputFloat speed("Speed", 2.f, 0.01f, 0.01f);
+ControlledInputFloat speed("Speed [%/sec]", 5.f, 0.1f, 0.1f, 100.f);
 glm::vec3 startPos(0.f);
 glm::vec3 endPos(3.f, 6.f, 9.f);
 static int mode = 0;
@@ -52,6 +54,10 @@ glm::vec3 startEA(0.f);
 glm::vec3 endEA(0.f);
 glm::quat startQ(1.f, 0.f, 0.f, 0.f);
 glm::quat endQ(1.f, 0.f, 0.f, 0.f);
+
+ControlledInputFloat l1("L1", 3.f, 0.01f, 0.01f);
+ControlledInputFloat l3("L3", 2.f, 0.01f, 0.01f);
+ControlledInputFloat l4("L4", 1.f, 0.01f, 0.01f);
 
 SymMemory* memory;
 SymData data;
@@ -122,9 +128,7 @@ int main() {
     #pragma endregion
 
 	// simulation
-    memory = new SymMemory(startPos, endPos, speed.GetValue(), glm::quat(), glm::quat());
-    data = memory->data;
-    calcThread = std::thread(calculationThread, memory);
+    launchCalcThread();
 
     while (!glfwWindowShouldClose(window)) 
     {
@@ -228,6 +232,13 @@ int main() {
 			break;
         }
         ImGui::Spacing();
+
+		ImGui::SeparatorText("Lengths:");
+		l1.Render();
+		l3.Render();
+		l4.Render();
+        ImGui::Spacing();
+
         ImGui::SeparatorText("Options:");
         speed.Render();
 
@@ -238,14 +249,7 @@ int main() {
 			memory->mutex.unlock();
 			calcThread.join();
 
-            if (mode == 0) {
-                memory = new SymMemory(startPos, endPos, speed.GetValue(), glm::quat(glm::radians(startEA)), glm::quat(glm::radians(endEA)));
-			}
-            else {
-                memory = new SymMemory(startPos, endPos, speed.GetValue(), glm::normalize(startQ), glm::normalize(endQ));
-            }
-            data = memory->data;
-			calcThread = std::thread(calculationThread, memory);
+			launchCalcThread();
         }
 
         ImGui::End();
@@ -276,4 +280,23 @@ void window_size_callback(GLFWwindow *window, int width, int height) {
   camera->SetWidth(width);
   camera->SetHeight(height);
   camera->PrepareMatrices(view, proj);
+}
+
+void launchCalcThread()
+{
+    glm::quat startQuat;
+	glm::quat endQuat;
+
+    if (mode == 0) {
+        startQuat = glm::quat(glm::radians(startEA));
+        endQuat = glm::quat(glm::radians(endEA));
+    }
+    else {
+        startQuat = glm::normalize(startQ);
+        endQuat = glm::normalize(endQ);
+    }
+
+	memory = new SymMemory(Frame(startPos, startQuat), Frame(endPos, endQuat), speed.GetValue(), l1.GetValue(), l3.GetValue(), l4.GetValue());
+    data = memory->data;
+    calcThread = std::thread(calculationThread, memory);
 }

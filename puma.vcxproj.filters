@@ -90,6 +90,9 @@
     <ClCompile Include="Classes\pointer.cpp">
       <Filter>Source Files\figures</Filter>
     </ClCompile>
+    <ClCompile Include="Classes\Frame.cpp">
+      <Filter>Source Files\assets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imgui\imconfig.h">
@@ -162,6 +165,9 @@
       <Filter>Header Files\assets</Filter>
     </ClInclude>
     <ClInclude Include="Classes\simulator.h">
+      <Filter>Header Files\assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Classes\Frame.h">
       <Filter>Header Files\assets</Filter>
     </ClInclude>
   </ItemGroup>
