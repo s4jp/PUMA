@@ -148,12 +148,12 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& length
 	glm::vec3 v40 = glm::normalize(p4 - p0);
 	glm::vec3 v20 = glm::normalize(p2 - p0);
 	glm::vec3 norm = glm::normalize(glm::cross(v40, v20));
-	// todo: check if v40 and v20 are parallel
-
 	glm::vec3 v34 = glm::normalize(glm::cross(norm, effectorFrame.GetX()));
 
 	glm::vec3 p3 = p4 + v34 * lengths.y;
 	if (prevIKData != nullptr) {
+		// set p3 to the closest point to the previous p3
+
 		glm::vec3 p3alt = p4 - v34 * lengths.y;
 
 		float distanceToPrev = glm::distance(p3, prevIKData->joints.p3);
@@ -172,6 +172,12 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& length
 			glm::vec3 v24 = glm::normalize(p2 - p4);
 			p3 = p4 + v24 * lengths.y;
 		}
+	}
+	if (isVec3NaN(norm)) {
+		// case when v40 and v20 are parallel
+
+		glm::vec3 v24 = glm::normalize(p2 - p4);
+		p3 = p4 + v24 * lengths.y;
 	}
 
 	//-----------------------------------------------------------------------------//
