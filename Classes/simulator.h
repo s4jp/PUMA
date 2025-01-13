@@ -45,6 +45,16 @@ struct ConfigurationSpace {
 			alpha4 * scalar,
 			alpha5 * scalar);
 	}
+
+	void Print() {
+		std::cout << "alpha1: " << alpha1 << std::endl;
+		std::cout << "alpha2: " << alpha2 << std::endl;
+		std::cout << "q2: " << q2 << std::endl;
+		std::cout << "alpha3: " << alpha3 << std::endl;
+		std::cout << "alpha4: " << alpha4 << std::endl;
+		std::cout << "alpha5: " << alpha5 << std::endl;
+		std::cout << std::endl;
+	}
 };
 
 struct Joints {
@@ -121,6 +131,10 @@ float normalizeAngle(const float angle) {
 	return newAngle;
 }
 
+bool isVec3NaN(const glm::vec3& vec) {
+	return std::isnan(vec.x) || std::isnan(vec.y) || std::isnan(vec.z);
+}
+
 IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& lengths, const IKSet* prevIKData)
 {
 	// calculate joints positions
@@ -137,7 +151,6 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& length
 	// todo: check if v40 and v20 are parallel
 
 	glm::vec3 v34 = glm::normalize(glm::cross(norm, effectorFrame.GetX()));
-	// todo: check if v34 and efectorFrame.GetX() are parallel
 
 	glm::vec3 p3 = p4 + v34 * lengths.y;
 	if (prevIKData != nullptr) {
@@ -147,6 +160,18 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& length
 		float altDistanceToPrev = glm::distance(p3alt, prevIKData->joints.p3);
 		if (altDistanceToPrev < distanceToPrev)
 			p3 = p3alt;
+	}
+	if (isVec3NaN(p3)) {
+		// case when v34 and x5 are parallel
+
+		if (prevIKData != nullptr) {
+			float distance = glm::dot(prevIKData->joints.p3, norm);
+			p3 = prevIKData->joints.p3 - norm * distance;
+		}
+		else {
+			glm::vec3 v24 = glm::normalize(p2 - p4);
+			p3 = p4 + v24 * lengths.y;
+		}
 	}
 
 	//-----------------------------------------------------------------------------//
@@ -256,10 +281,10 @@ void calculationThread(SymMemory* memory)
 	std::chrono::high_resolution_clock::time_point calc_start, calc_end, wait_start;
 
 	IKSet startIK = solveInverseKinematics(memory->params.startFrame, memory->params.lengths, nullptr);
-	IKSet prevIK = startIK;
-
-	IKSet endIK = solveInverseKinematics(memory->params.endFrame, memory->params.lengths, &prevIK);
+	IKSet endIK = solveInverseKinematics(memory->params.endFrame, memory->params.lengths, nullptr);
 	ConfigurationSpace directions = calculateIterpolationDirection(startIK.configSpace, endIK.configSpace);
+
+	IKSet prevIK = startIK;
 
 	memory->data.lengths = memory->params.lengths;
 
