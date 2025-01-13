@@ -8,7 +8,6 @@ private:
 	glm::vec3 y;
 	glm::vec3 z;
 	glm::vec3 origin;
-	glm::mat4 model;
 
 public:
 	Frame();
@@ -24,5 +23,4 @@ public:
 	void Translate(glm::vec3 translation);
 	glm::mat4 GetMatrix() const;
 	glm::quat GetRotation() const;
-	glm::mat4 GetModel() const;
 };

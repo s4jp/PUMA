@@ -25,6 +25,26 @@ struct ConfigurationSpace {
 
 	ConfigurationSpace(float alpha1, float alpha2, float q2, float alpha3, float alpha4, float alpha5) :
 		alpha1(alpha1), alpha2(alpha2), q2(q2), alpha3(alpha3), alpha4(alpha4), alpha5(alpha5) {}
+
+	ConfigurationSpace operator+(const ConfigurationSpace& other) {
+		return ConfigurationSpace(
+			alpha1 + other.alpha1,
+			alpha2 + other.alpha2,
+			q2 + other.q2,
+			alpha3 + other.alpha3,
+			alpha4 + other.alpha4,
+			alpha5 + other.alpha5);
+	}
+
+	ConfigurationSpace operator*(const float& scalar) {
+		return ConfigurationSpace(
+			alpha1 * scalar,
+			alpha2 * scalar,
+			q2 * scalar,
+			alpha3 * scalar,
+			alpha4 * scalar,
+			alpha5 * scalar);
+	}
 };
 
 struct Joints {
@@ -91,6 +111,17 @@ struct SymMemory {
 	}
 };
 
+float normalizeAngle(const float angle) {
+	float newAngle = angle;
+	while (newAngle > M_PI) {
+		newAngle -= 2 * M_PI;
+	}
+	while (newAngle < -M_PI) {
+		newAngle += 2 * M_PI;
+	}
+	return newAngle;
+}
+
 IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const float l3, const float l4) 
 {
 	// calculate joints positions
@@ -119,23 +150,27 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 	// todo: handle v30 vs v40
 	v40 = p4 - p0;
 	float alpha1 = atan2(glm::dot(v40, baseFrame.GetY()), glm::dot(v40, baseFrame.GetX()));
+	alpha1 = normalizeAngle(alpha1);
 	Frame F1 = Frame(baseFrame);
 	F1.Rotate(glm::angleAxis(alpha1, baseFrame.GetZ()));
 
 	glm::vec3 v32 = p3 - p2;
 	float alpha2 = -atan2(glm::dot(v32, F1.GetZ()), glm::dot(v32, F1.GetX()));
+	alpha2 = normalizeAngle(alpha2);
 	Frame F2 = Frame(F1);
 	F2.Translate(F1.GetZ() * l1);
 	F2.Rotate(glm::angleAxis(alpha2, F1.GetY()));
 
 	glm::vec3 x3 = glm::normalize(glm::cross(F2.GetY(), glm::normalize(p3 - p4)));
 	float alpha3 = -atan2(glm::dot(x3, F2.GetZ()), glm::dot(x3, F2.GetX()));
+	alpha3 = normalizeAngle(alpha3);
 	Frame F3 = Frame(F2);
 	F3.Translate(F2.GetX() * q2);
 	F3.Rotate(glm::angleAxis(alpha3, F2.GetY()));
 
 	glm::vec3 x5 = effectorFrame.GetX();
 	float alpha4 = atan2(glm::dot(x5, F3.GetY()), glm::dot(x5, F3.GetX()));
+	alpha4 = normalizeAngle(alpha4);
 	Frame F4 = Frame(F3);
 	F4.Translate(F3.GetZ() * -l3);
 	F4.Rotate(glm::angleAxis(alpha4, F3.GetZ()));
@@ -144,6 +179,7 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 	glm::vec3 y4 = glm::cross(z4, x5);
 	glm::vec3 z5 = effectorFrame.GetZ();
 	float alpha5 = M_PI / 2.0f - atan2(glm::dot(z5, z4), -glm::dot(z5, y4));
+	alpha5 = normalizeAngle(alpha5);
 	Frame F5 = Frame(F4);
 	F5.Translate(F4.GetX() * l4);
 	F5.Rotate(glm::angleAxis(alpha5, F4.GetX()));
@@ -165,11 +201,47 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const f
 		{ F1, F2, F3, F4, F5 });
 }
 
+std::array<Frame, 5> calculateFramesFromConfSpace(ConfigurationSpace configSpace, float l1, float l3, float l4)
+{
+	Frame F1 = Frame(baseFrame);
+	F1.Rotate(glm::angleAxis(configSpace.alpha1, baseFrame.GetZ()));
+
+	Frame F2 = Frame(F1);
+	F2.Translate(F1.GetZ() * l1);
+	F2.Rotate(glm::angleAxis(configSpace.alpha2, F1.GetY()));
+
+	Frame F3 = Frame(F2);
+	F3.Translate(F2.GetX() * configSpace.q2);
+	F3.Rotate(glm::angleAxis(configSpace.alpha3, F2.GetY()));
+
+	Frame F4 = Frame(F3);
+	F4.Translate(F3.GetZ() * -l3);
+	F4.Rotate(glm::angleAxis(configSpace.alpha4, F3.GetZ()));
+
+	Frame F5 = Frame(F4);
+	F5.Translate(F4.GetX() * l4);
+	F5.Rotate(glm::angleAxis(configSpace.alpha5, F4.GetX()));
+
+	return { F1, F2, F3, F4, F5 };
+}
+
 Frame interpolateFrames(Frame startFrame, Frame endFrame, const float t)
 {
 	glm::vec3 posLerp = glm::mix(startFrame.GetOrigin(), endFrame.GetOrigin(), t);
 	glm::quat angleSlerp = glm::slerp(startFrame.GetRotation(), endFrame.GetRotation(), t);
 	return Frame(posLerp, angleSlerp);
+}
+
+ConfigurationSpace calculateIterpolationDirection(const ConfigurationSpace& startCS, const ConfigurationSpace& endCS)
+{
+	float angle1 = normalizeAngle(endCS.alpha1 - startCS.alpha1);
+	float angle2 = normalizeAngle(endCS.alpha2 - startCS.alpha2);
+	float q2 = endCS.q2 - startCS.q2;
+	float angle3 = normalizeAngle(endCS.alpha3 - startCS.alpha3);
+	float angle4 = normalizeAngle(endCS.alpha4 - startCS.alpha4);
+	float angle5 = normalizeAngle(endCS.alpha5 - startCS.alpha5);
+
+	return ConfigurationSpace(angle1, angle2, q2, angle3, angle4, angle5);
 }
 
 void calculationThread(SymMemory* memory)
@@ -178,6 +250,7 @@ void calculationThread(SymMemory* memory)
 
 	IKSet startIK = solveInverseKinematics(memory->params.startFrame, memory->params.l1, memory->params.l3, memory->params.l4);
 	IKSet endIK = solveInverseKinematics(memory->params.endFrame, memory->params.l1, memory->params.l3, memory->params.l4);
+	ConfigurationSpace directions = calculateIterpolationDirection(startIK.configSpace, endIK.configSpace);
 
 	while (!memory->terminateThread) {
 
@@ -193,12 +266,18 @@ void calculationThread(SymMemory* memory)
 			t = 1;
 			memory->terminateThread = true;
 		}
+		ConfigurationSpace currCS = startIK.configSpace + directions * t;
+		std::array<Frame, 5> currFrames = calculateFramesFromConfSpace(currCS, memory->params.l1, memory->params.l3, memory->params.l4);
 		IKSet currIK = solveInverseKinematics(interpolateFrames(memory->params.startFrame, memory->params.endFrame, t),
 			memory->params.l1, memory->params.l3, memory->params.l4);
 
 		// F1, F2, F3, F4, F5
 		memory->data.leftModels = {
-			// TO FILL
+			currFrames.at(0).GetMatrix(),
+			currFrames.at(1).GetMatrix()* F2initRot,
+			currFrames.at(2).GetMatrix()* F3initRot,
+			currFrames.at(3).GetMatrix()* F4initRot,
+			currFrames.at(4).GetMatrix()
 		};
 		memory->data.rightModels = {
 			currIK.frames.at(0).GetMatrix(),
@@ -209,7 +288,7 @@ void calculationThread(SymMemory* memory)
 		};
 
 		memory->data.q2s = { 
-			currIK.configSpace.q2, // <--- TO CHANGE
+			currCS.q2,
 			currIK.configSpace.q2 
 		};
 
