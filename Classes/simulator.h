@@ -121,7 +121,7 @@ float normalizeAngle(const float angle) {
 	return newAngle;
 }
 
-IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& lengths)
+IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& lengths, const IKSet* prevIKData)
 {
 	// calculate joints positions
 	glm::vec3 p0 = baseFrame.GetOrigin();
@@ -138,8 +138,16 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& length
 
 	glm::vec3 v34 = glm::normalize(glm::cross(norm, effectorFrame.GetX()));
 	// todo: check if v34 and efectorFrame.GetX() are parallel
-	glm::vec3 p3 = p4 - v34 * lengths.y;
-	// todo: handle +- v34
+
+	glm::vec3 p3 = p4 + v34 * lengths.y;
+	if (prevIKData != nullptr) {
+		glm::vec3 p3alt = p4 - v34 * lengths.y;
+
+		float distanceToPrev = glm::distance(p3, prevIKData->joints.p3);
+		float altDistanceToPrev = glm::distance(p3alt, prevIKData->joints.p3);
+		if (altDistanceToPrev < distanceToPrev)
+			p3 = p3alt;
+	}
 
 	//-----------------------------------------------------------------------------//
 
@@ -247,8 +255,10 @@ void calculationThread(SymMemory* memory)
 {
 	std::chrono::high_resolution_clock::time_point calc_start, calc_end, wait_start;
 
-	IKSet startIK = solveInverseKinematics(memory->params.startFrame, memory->params.lengths);
-	IKSet endIK = solveInverseKinematics(memory->params.endFrame, memory->params.lengths);
+	IKSet startIK = solveInverseKinematics(memory->params.startFrame, memory->params.lengths, nullptr);
+	IKSet prevIK = startIK;
+
+	IKSet endIK = solveInverseKinematics(memory->params.endFrame, memory->params.lengths, &prevIK);
 	ConfigurationSpace directions = calculateIterpolationDirection(startIK.configSpace, endIK.configSpace);
 
 	memory->data.lengths = memory->params.lengths;
@@ -269,7 +279,8 @@ void calculationThread(SymMemory* memory)
 		}
 		ConfigurationSpace currCS = startIK.configSpace + directions * t;
 		std::array<Frame, 5> currFrames = calculateFramesFromConfSpace(currCS, memory->params.lengths);
-		IKSet currIK = solveInverseKinematics(interpolateFrames(memory->params.startFrame, memory->params.endFrame, t), memory->params.lengths);
+		IKSet currIK = solveInverseKinematics(interpolateFrames(memory->params.startFrame, memory->params.endFrame, t), memory->params.lengths, &prevIK);
+		prevIK = currIK;
 
 		// F1, F2, F3, F4, F5
 		memory->data.leftModels = {
