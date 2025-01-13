@@ -55,7 +55,7 @@ void Frame::Rotate(glm::quat rotation)
 {
 	x = glm::normalize(rotation * x);
 	y = glm::normalize(rotation * y);
-	z = glm::normalize(rotation * z);
+	z = glm::normalize(rotation * z);	
 	model = model * glm::mat4_cast(rotation);
 }
 
@@ -67,12 +67,17 @@ void Frame::Translate(glm::vec3 translation)
 
 glm::mat4 Frame::GetMatrix() const
 {
-	glm::mat4 matrix(0.f);
-	matrix[0] = glm::vec4(x, 0.f);
-	matrix[1] = glm::vec4(y, 0.f);
-	matrix[2] = glm::vec4(z, 0.f);
-	matrix[3] = glm::vec4(origin, 1.f);
-	return matrix;
+	//glm::mat4 matrix(0.f);
+	//matrix[0] = glm::vec4(x, 0.f);
+	//matrix[1] = glm::vec4(y, 0.f);
+	//matrix[2] = glm::vec4(z, 0.f);
+	//matrix[3] = glm::vec4(origin, 1.f);
+	//return matrix;
+
+	glm::mat4 translation = glm::translate(glm::mat4(1.f), GetOrigin());
+	glm::mat4 rotation = glm::toMat4(GetRotation());
+
+	return translation * rotation;
 }
 
 glm::quat Frame::GetRotation() const

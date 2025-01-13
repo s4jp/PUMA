@@ -11,6 +11,9 @@
 
 static int dt = 10;		// in milliseconds
 const Frame baseFrame = Frame();
+const glm::mat4 F2initRot = glm::mat4_cast(glm::angleAxis((float)M_PI_2, glm::vec3(0.0f, 1.0f, 0.0f)));
+const glm::mat4 F3initRot = glm::mat4_cast(glm::angleAxis((float)M_PI, glm::vec3(0.0f, 1.0f, 0.0f)));
+const glm::mat4 F4initRot = F2initRot;
 
 struct ConfigurationSpace {
 	float alpha1;
@@ -87,20 +90,6 @@ struct SymMemory {
 		mutex.unlock();
 	}
 };
-
-//std::pair<glm::mat4, glm::mat4> calculateModelMatrices(SymMemory* memory, float t)
-//{
-//	glm::vec3 posLerp = glm::mix(
-//		memory->params.startPos,
-//		memory->params.endPos, t);
-//	glm::mat4 translateLerp = glm::translate(glm::mat4(1.f), posLerp);
-//
-//	glm::quat angleSlerp = glm::slerp(memory->params.startQuat, memory->params.endQuat, t);
-//	glm::mat4 rotationSlerp = glm::mat4_cast(angleSlerp);
-//
-//	// temporary return same values
-//	return { translateLerp * rotationSlerp, translateLerp * rotationSlerp };
-//};
 
 IKSet solveInverseKinematics(const Frame& effectorFrame, const float l1, const float l3, const float l4) 
 {
@@ -204,78 +193,25 @@ void calculationThread(SymMemory* memory)
 			t = 1;
 			memory->terminateThread = true;
 		}
-
-		Frame interpolatedFrame = interpolateFrames(memory->params.startFrame, memory->params.endFrame, t);
-		//std::cout << "t: " << t << std::endl;
-		//CAD::printVector(interpolatedFrame.GetOrigin());
-		//std::cout << std::endl;
-		
-		IKSet currIK = solveInverseKinematics(interpolatedFrame,
+		IKSet currIK = solveInverseKinematics(interpolateFrames(memory->params.startFrame, memory->params.endFrame, t),
 			memory->params.l1, memory->params.l3, memory->params.l4);
 
-		// DEBUG PRINT
-		if (t == 1) {
-			//compare GetModel() with GetMatrix()
-			glm::mat4 model1 = currIK.frames.at(0).GetModel();
-			glm::mat4 model2 = currIK.frames.at(1).GetModel();
-			glm::mat4 model3 = currIK.frames.at(2).GetModel();
-			glm::mat4 model4 = currIK.frames.at(3).GetModel();
-			glm::mat4 model5 = currIK.frames.at(4).GetModel();
-
-			glm::mat4 matrix1 = currIK.frames.at(0).GetMatrix();
-			glm::mat4 matrix2 = currIK.frames.at(1).GetMatrix();
-			glm::mat4 matrix3 = currIK.frames.at(2).GetMatrix();
-			glm::mat4 matrix4 = currIK.frames.at(3).GetMatrix();
-			glm::mat4 matrix5 = currIK.frames.at(4).GetMatrix();
-
-			std::cout << "M1: " << std::endl;
-			CAD::printMatrix(model1);
-			std::cout << "----------------------------" << std::endl;
-			CAD::printMatrix(matrix1);
-			std::cout << std::endl;
-
-			std::cout << "M2: " << std::endl;
-			CAD::printMatrix(model2);
-			std::cout << "----------------------------" << std::endl;
-			CAD::printMatrix(matrix2);
-			std::cout << std::endl;
-
-			std::cout << "M3: " << std::endl;
-			CAD::printMatrix(model3);
-			std::cout << "----------------------------" << std::endl;
-			CAD::printMatrix(matrix3);
-			std::cout << std::endl;
-
-			std::cout << "M4: " << std::endl;
-			CAD::printMatrix(model4);
-			std::cout << "----------------------------" << std::endl;
-			CAD::printMatrix(matrix4);
-			std::cout << std::endl;
-
-			std::cout << "M5: " << std::endl;
-			CAD::printMatrix(model5);
-			std::cout << "----------------------------" << std::endl;
-			CAD::printMatrix(matrix5);
-			std::cout << std::endl;
-		}
-
+		// F1, F2, F3, F4, F5
 		memory->data.leftModels = {
-			currIK.frames.at(0).GetModel(),
-			currIK.frames.at(1).GetModel(),
-			currIK.frames.at(2).GetModel(),
-			currIK.frames.at(3).GetModel(),
-			currIK.frames.at(4).GetModel()
+			// TO FILL
 		};
-
 		memory->data.rightModels = {
 			currIK.frames.at(0).GetMatrix(),
-			currIK.frames.at(1).GetMatrix(),
-			currIK.frames.at(2).GetMatrix(),
-			currIK.frames.at(3).GetMatrix(),
+			currIK.frames.at(1).GetMatrix() * F2initRot,
+			currIK.frames.at(2).GetMatrix() * F3initRot,
+			currIK.frames.at(3).GetMatrix() * F4initRot,
 			currIK.frames.at(4).GetMatrix()
 		};
 
-		memory->data.q2s = { currIK.configSpace.q2, currIK.configSpace.q2 };
+		memory->data.q2s = { 
+			currIK.configSpace.q2, // <--- TO CHANGE
+			currIK.configSpace.q2 
+		};
 
 		memory->mutex.unlock();
 

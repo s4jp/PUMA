@@ -47,11 +47,12 @@ glm::mat4 proj;
 void window_size_callback(GLFWwindow *window, int width, int height);
 void launchCalcThread();
 void phongRenderCalls(std::array<glm::mat4, 5> models, float q2);
+glm::vec3 changeCoordianteSystem(glm::vec3 vec);
 
 int viewLoc, projLoc, colorLoc;
 int phongModelLoc, phongViewLoc, phongProjLoc, phongColorLoc;
 
-ControlledInputFloat speed("Speed [%/sec]", 5.f, 0.1f, 0.1f, 100.f);
+ControlledInputFloat speed("Speed [%/sec]", 10.f, 0.1f, 0.1f, 100.f);
 glm::vec3 startPos(0.f);
 glm::vec3 endPos(3.f, 6.f, 9.f);
 static int mode = 0;
@@ -121,8 +122,8 @@ int main() {
 	cylinder = new Mesh("Meshes\\cylinder.obj", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
 	sphere = new Mesh("Meshes\\sphere.obj", glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
 	pointerX = new Mesh("Meshes\\pointerX.obj", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-	pointerY = new Mesh("Meshes\\pointerY.obj", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
-	pointerZ = new Mesh("Meshes\\pointerZ.obj", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+	pointerY = new Mesh("Meshes\\pointerY.obj", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+	pointerZ = new Mesh("Meshes\\pointerZ.obj", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
 
     #pragma region imgui_boilerplate
     IMGUI_CHECKVERSION();
@@ -293,7 +294,10 @@ void launchCalcThread()
         endQuat = glm::normalize(endQ);
     }
 
-	memory = new SymMemory(Frame(startPos, startQuat), Frame(endPos, endQuat), speed.GetValue(), l1.GetValue(), l3.GetValue(), l4.GetValue());
+	memory = new SymMemory(
+        Frame(changeCoordianteSystem(startPos), startQuat), 
+        Frame(changeCoordianteSystem(endPos), endQuat), 
+        speed.GetValue(), l1.GetValue(), l3.GetValue(), l4.GetValue());
     data = memory->data;
     calcThread = std::thread(calculationThread, memory);
 }
@@ -311,11 +315,16 @@ void phongRenderCalls(std::array<glm::mat4,5> models, float q2)
 
     for (auto& model : models) {
         glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        if (model == models.back()) continue;
+        //if (model == models.back()) continue;
         sphere->Render(phongColorLoc);
     }
 
-    pointerX->Render(phongColorLoc);
-    pointerY->Render(phongColorLoc);
-    pointerZ->Render(phongColorLoc);
+    //pointerX->Render(phongColorLoc);
+    //pointerY->Render(phongColorLoc);
+    //pointerZ->Render(phongColorLoc);
+}
+
+glm::vec3 changeCoordianteSystem(glm::vec3 vec)
+{
+	return glm::vec3(vec.x, -vec.z, vec.y);
 }
