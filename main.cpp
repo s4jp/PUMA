@@ -52,18 +52,18 @@ glm::vec3 changeCoordianteSystem(glm::vec3 vec);
 int viewLoc, projLoc, colorLoc;
 int phongModelLoc, phongViewLoc, phongProjLoc, phongColorLoc;
 
-ControlledInputFloat speed("Speed [%/sec]", 10.f, 0.1f, 0.1f, 100.f);
+ControlledInputFloat speed("Speed [%/sec]", 25.f, 0.1f, 0.1f, 100.f);
 glm::vec3 startPos(0.f);
-glm::vec3 endPos(3.f, 6.f, 9.f);
+glm::vec3 endPos(3.f, 6.f, -4.f);
 static int mode = 0;
 glm::vec3 startEA(0.f);
-glm::vec3 endEA(0.f);
+glm::vec3 endEA(0.f, 60.f, 0.f);
 glm::quat startQ(1.f, 0.f, 0.f, 0.f);
 glm::quat endQ(1.f, 0.f, 0.f, 0.f);
 
 ControlledInputFloat l1("L1", 3.f, 0.01f, 0.01f);
 ControlledInputFloat l3("L3", 2.f, 0.01f, 0.01f);
-ControlledInputFloat l4("L4", 1.f, 0.01f, 0.01f);
+ControlledInputFloat l4("L4", 4.f, 0.01f, 0.01f);
 
 SymMemory* memory;
 SymData data;
