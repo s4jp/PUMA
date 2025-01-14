@@ -204,7 +204,7 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& length
 
 	// alpha3
 	glm::vec3 v34 = p3 - p4;
-	glm::vec3 x3 = glm::normalize(glm::cross(F2.GetY(), glm::normalize(v34)));
+	glm::vec3 x3 = glm::cross(F2.GetY(), glm::normalize(v34));
 	float alpha3 = -atan2(glm::dot(x3, F2.GetZ()), glm::dot(x3, F2.GetX()));
 
 	alpha3 = normalizeAngle(alpha3);
@@ -221,8 +221,8 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& length
 	F4.Rotate(glm::angleAxis(alpha4, F3.GetZ()));
 
 	// alpha5
-	glm::vec3 y4 = glm::cross(v34, effectorFrame.GetX());
-	float alpha5 = M_PI_2 - atan2(glm::dot(effectorFrame.GetZ(), v34), glm::dot(effectorFrame.GetZ(), -y4));
+	glm::vec3 y4 = glm::cross(effectorFrame.GetX(), v34);
+	float alpha5 = M_PI_2 - atan2(glm::dot(effectorFrame.GetZ(), v34), glm::dot(effectorFrame.GetZ(), y4));
 
 	alpha5 = normalizeAngle(alpha5);
 	Frame F5 = Frame(F4);
