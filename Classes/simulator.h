@@ -323,9 +323,9 @@ void calculationThread(SymMemory* memory)
 		// F1, F2, F3, F4, F5
 		memory->data.leftModels = {
 			currFrames.at(0).GetMatrix(),
-			currFrames.at(1).GetMatrix()* F2initRot,
-			currFrames.at(2).GetMatrix()* F3initRot,
-			currFrames.at(3).GetMatrix()* F4initRot,
+			currFrames.at(1).GetMatrix() * F2initRot,
+			currFrames.at(2).GetMatrix() * F3initRot,
+			currFrames.at(3).GetMatrix() * F4initRot,
 			currFrames.at(4).GetMatrix()
 		};
 		memory->data.rightModels = {

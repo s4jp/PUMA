@@ -122,8 +122,8 @@ int main() {
 	cylinder = new Mesh("Meshes\\cylinder.obj", glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
 	sphere = new Mesh("Meshes\\sphere.obj", glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
 	pointerX = new Mesh("Meshes\\pointerX.obj", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-	pointerY = new Mesh("Meshes\\pointerY.obj", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-	pointerZ = new Mesh("Meshes\\pointerZ.obj", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+	pointerY = new Mesh("Meshes\\pointerY.obj", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+	pointerZ = new Mesh("Meshes\\pointerZ.obj", glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
 
     #pragma region imgui_boilerplate
     IMGUI_CHECKVERSION();
@@ -315,13 +315,13 @@ void phongRenderCalls(std::array<glm::mat4,5> models, float q2, glm::vec3 length
 
     for (auto& model : models) {
         glUniformMatrix4fv(phongModelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        //if (model == models.back()) continue;
+        if (model == models.back()) continue;
         sphere->Render(phongColorLoc);
     }
 
-    //pointerX->Render(phongColorLoc);
-    //pointerY->Render(phongColorLoc);
-    //pointerZ->Render(phongColorLoc);
+    pointerX->Render(phongColorLoc);
+    pointerY->Render(phongColorLoc);
+    pointerZ->Render(phongColorLoc);
 }
 
 glm::vec3 changeCoordianteSystem(glm::vec3 vec)
