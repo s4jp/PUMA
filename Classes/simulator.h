@@ -148,13 +148,13 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& length
 	glm::vec3 v40 = glm::normalize(p4 - p0);
 	glm::vec3 v20 = glm::normalize(p2 - p0);
 	glm::vec3 norm = glm::normalize(glm::cross(v40, v20));
-	glm::vec3 v34 = glm::normalize(glm::cross(norm, effectorFrame.GetX()));
+	glm::vec3 v34n = glm::normalize(glm::cross(norm, effectorFrame.GetX()));
 
-	glm::vec3 p3 = p4 + v34 * lengths.y;
+	glm::vec3 p3 = p4 + v34n * lengths.y;
 	if (prevIKData != nullptr) {
 		// set p3 to the closest point to the previous p3
 
-		glm::vec3 p3alt = p4 - v34 * lengths.y;
+		glm::vec3 p3alt = p4 - v34n * lengths.y;
 
 		float distanceToPrev = glm::distance(p3, prevIKData->joints.p3);
 		float altDistanceToPrev = glm::distance(p3alt, prevIKData->joints.p3);
@@ -185,38 +185,45 @@ IKSet solveInverseKinematics(const Frame& effectorFrame, const glm::vec3& length
 	// calculate configuration space
 	float q2 = glm::distance(p2, p3);
 
-	// todo: handle v30 vs v40
+	// alpha1
 	v40 = p4 - p0;
 	float alpha1 = atan2(glm::dot(v40, baseFrame.GetY()), glm::dot(v40, baseFrame.GetX()));
+
 	alpha1 = normalizeAngle(alpha1);
 	Frame F1 = Frame(baseFrame);
 	F1.Rotate(glm::angleAxis(alpha1, baseFrame.GetZ()));
 
+	// alpha2
 	glm::vec3 v32 = p3 - p2;
 	float alpha2 = -atan2(glm::dot(v32, F1.GetZ()), glm::dot(v32, F1.GetX()));
+
 	alpha2 = normalizeAngle(alpha2);
 	Frame F2 = Frame(F1);
 	F2.Translate(F1.GetZ() * lengths.x);
 	F2.Rotate(glm::angleAxis(alpha2, F1.GetY()));
 
-	glm::vec3 x3 = glm::normalize(glm::cross(F2.GetY(), glm::normalize(p3 - p4)));
+	// alpha3
+	glm::vec3 v34 = p3 - p4;
+	glm::vec3 x3 = glm::normalize(glm::cross(F2.GetY(), glm::normalize(v34)));
 	float alpha3 = -atan2(glm::dot(x3, F2.GetZ()), glm::dot(x3, F2.GetX()));
+
 	alpha3 = normalizeAngle(alpha3);
 	Frame F3 = Frame(F2);
 	F3.Translate(F2.GetX() * q2);
 	F3.Rotate(glm::angleAxis(alpha3, F2.GetY()));
 
-	glm::vec3 x5 = effectorFrame.GetX();
-	float alpha4 = atan2(glm::dot(x5, F3.GetY()), glm::dot(x5, F3.GetX()));
+	// alpha4
+	float alpha4 = atan2(glm::dot(effectorFrame.GetX(), F3.GetY()), glm::dot(effectorFrame.GetX(), F3.GetX()));
+
 	alpha4 = normalizeAngle(alpha4);
 	Frame F4 = Frame(F3);
 	F4.Translate(F3.GetZ() * -lengths.y);
 	F4.Rotate(glm::angleAxis(alpha4, F3.GetZ()));
 
-	glm::vec3 z4 = p3 - p4;
-	glm::vec3 y4 = glm::cross(z4, x5);
-	glm::vec3 z5 = effectorFrame.GetZ();
-	float alpha5 = M_PI / 2.0f - atan2(glm::dot(z5, z4), -glm::dot(z5, y4));
+	// alpha5
+	glm::vec3 y4 = glm::cross(v34, effectorFrame.GetX());
+	float alpha5 = M_PI_2 - atan2(glm::dot(effectorFrame.GetZ(), v34), glm::dot(effectorFrame.GetZ(), -y4));
+
 	alpha5 = normalizeAngle(alpha5);
 	Frame F5 = Frame(F4);
 	F5.Translate(F4.GetX() * lengths.z);
